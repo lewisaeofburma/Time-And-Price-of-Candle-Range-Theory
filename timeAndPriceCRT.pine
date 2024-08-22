@@ -1,0 +1,258 @@
+//@version=5
+indicator("Time And Price of Candle Range Theory", overlay=true)
+
+color TRANS_COLOR   = #00000000
+
+
+// Input options for visibility, times, colors, and labels 
+showLine1 = input.bool(true, title="Show Line 1", group="Line 1 Settings")
+time_start1 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 7, 0)
+time_end1 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 14, 0)
+color1 = input.color(defval = color.rgb(255, 0, 0, 46), title="Color for Line 1", group="Line 1 Settings")
+label1 = input.string("7", title="Label for Line 1", group="Line 1 Settings")
+
+showLine2 = input.bool(true, title="Show Line 2", group="Line 2 Settings")
+time_start2 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 8, 30)
+time_end2 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 14, 0)
+color2 = input.color(defval = #000000, title="Color for Line 2", group="Line 2 Settings")
+label2 = input.string("New", title="Label for Line 2", group="Line 2 Settings")
+
+showLine3 = input.bool(true, title="Show Line 3", group="Line 3 Settings")
+time_start3 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 9, 30)
+time_end3 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 14, 0)
+color3 = input.color(defval = #000000, title="Color for Line 3", group="Line 3 Settings")
+label3 = input.string("NYSE", title="Label for Line 3", group="Line 3 Settings")
+
+showLine4 = input.bool(true, title="Show Line 4", group="Line 4 Settings")
+time_start4 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 10, 0)
+time_end4 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 14, 0)
+color4 = input.color(defval = #2200ff, title="Color for Line 4", group="Line 4 Settings")
+label4 = input.string("4H open", title="Label for Line 4", group="Line 4 Settings")
+
+showLine5 = input.bool(true, title="Show Line 5", group="Line 5 Settings")
+time_start5 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 0, 0)
+time_end5 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 14, 0)
+color5 = input.color(defval = #000000, title="Color for Line 5", group="Line 5 Settings")
+label5 = input.string("NYO", title="Label for Line 5", group="Line 5 Settings")
+
+showLine6 = input.bool(true, title="Show Line 6", group="Line 6 Settings")
+time_start6 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 18, 0)
+time_end6 = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 23, 59)
+color6 = input.color(defval = color.rgb(255, 0, 0, 51), title="Color for Line 6", group="Line 6 Settings")
+label6 = input.string("NDOG", title="Label for Line 6", group="Line 6 Settings")
+
+
+// Add a checkbox input to control the highlighting of the box
+highlightBoxEnabled1 = input.bool(true, title="Box", group="Box 1 Design")
+highlightBoxEnabled2 = input.bool(true, title="Box", group="Box 2 Design")
+// User inputs for box design
+boxBgColor = input.color(defval=color.new(color.yellow, 90), title="Box Background Color", group="Box 1 Design")
+boxOutlineColor = input.color(defval=TRANS_COLOR, title="Box Outline Color", group="Box 1 Design")
+boxOutlineWidth = input.int(defval=0, title="Box Outline Width", group="Box 1 Design")
+// User inputs for box design2
+boxBgColor2 = input.color(defval=color.new(color.blue, 90), title="Box Background Color", group="Box 2 Design")
+boxOutlineColor2 = input.color(defval=TRANS_COLOR, title="Box Outline Color", group="Box 2 Design")
+boxOutlineWidth2 = input.int(defval=0, title="Box Outline Width", group="Box 2 Design")
+// Get the timestamp for 2:00 AM and 5:00 AM EST on the same day
+londonStart = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 2, 0)
+londonEnd = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 5, 0)
+nyStart = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 7, 0)
+nyEnd = timestamp("America/New_York", year(time), month(time), dayofmonth(time), 12, 0)
+
+
+
+drawLineAtInputTime(showLine, startTimestamp, endTimestamp, _f_color, lineLabel) =>
+    var line lineId = na  // Declare the line variable persistently
+    var float startPrice = na  // Variable to store the price at the start time
+    var label lineLabelId = na
+
+    // Get the current time in EST
+    currentTimestamp = time
+
+    // Calculate the number of bars from the current time to the start time
+    barsBackTo = int((currentTimestamp - startTimestamp) / (time - time[1]))
+
+
+    // Reset the start price after the end time to allow for a new line next day
+    if currentTimestamp > endTimestamp
+        startPrice := na
+
+    if showLine and currentTimestamp >= startTimestamp and currentTimestamp <= endTimestamp
+        // Capture the start price at the open of the startTimestamp bar
+        if na(startPrice) and currentTimestamp >= startTimestamp
+            startPrice := open
+
+        // Create the line if it doesn't exist
+        lineId := na(lineId) ? line.new(bar_index - barsBackTo, startPrice, bar_index, startPrice, width=1, color=_f_color, style=line.style_dotted) : lineId
+        // Update the line to cover the correct range
+        line.set_xy1(lineId, bar_index - barsBackTo, startPrice)
+        line.set_xy2(lineId, bar_index, startPrice)
+
+         // Add or update the label on the line
+        if na(lineLabelId)
+            // Create the label at the start of the line (or you can choose another position)
+            lineLabelId := label.new(bar_index, startPrice, text=lineLabel, color=TRANS_COLOR, textcolor=_f_color, style=label.style_label_left, size=size.small, textalign=text.align_center)
+        else
+            // Update the label position and text if it already exists
+            label.set_xy(lineLabelId, bar_index, startPrice)
+            label.set_text(lineLabelId, lineLabel)
+            label.set_textcolor(lineLabelId, _f_color)
+
+
+
+    lineId  // Return the lineId to maintain the correct type
+
+
+
+// Call the function Draw lines
+drawLineAtInputTime(showLine1, time_start1, time_end1, color1, label1)  // Line 1
+drawLineAtInputTime(showLine2, time_start2, time_end2, color2, label2)
+drawLineAtInputTime(showLine3, time_start3, time_end3, color3, label3)
+drawLineAtInputTime(showLine4, time_start4, time_end4, color4, label4)
+drawLineAtInputTime(showLine5, time_start5, time_end5, color5, label5)
+drawLineAtInputTime(showLine6, time_start6, time_end6, color6, label6)
+
+
+// Highlight function 
+
+// Function to highlight the range from 2:00 AM to 5:00 AM EST
+highlightTimeBox(highlightBoxEnabled, inputBgColor, inputOutlineColor, inputOutlineWidth, startTimestamp, endTimestamp) =>
+    var box highlightBox = na  // Declare the box globally
+    var float highestPrice = na
+    var float lowestPrice = na  // Variable to store the lowest price
+
+
+    // Get the current time in EST
+    currentTimestamp = time
+    currentHour = hour(time("America/New_York"))
+    currentMinute = minute(time("America/New_York"))
+
+
+    // Calculate the number of bars from the current time to startTimestamp
+    barsBackTo2AM = int((currentTimestamp - startTimestamp) / (time - time[1]))
+
+    // Reset highestPrice to na at the beginning of each day
+    if (time[1] < startTimestamp and time >= startTimestamp)
+        highestPrice := na
+
+    // Check if the current time is between 2:00 AM and 5:00 AM EST
+    if time >= startTimestamp and time <= endTimestamp
+        if na(highestPrice)
+            highestPrice := high
+        else
+            highestPrice := math.max(highestPrice, high)
+
+        // Reset lowestPrice to na at the beginning of each day
+    if (time[1] < startTimestamp and time >= startTimestamp)
+        lowestPrice := na
+
+    // Check if the current time is between 2:00 AM and 5:00 AM EST
+    if time >= startTimestamp and time <= endTimestamp
+        if na(lowestPrice)
+            lowestPrice := low
+        else
+            lowestPrice := math.min(lowestPrice, low)
+
+    if highlightBoxEnabled and currentTimestamp >= startTimestamp and currentTimestamp <= endTimestamp
+        // Create or update the box that spans from 2:00 AM to 5:00 AM
+        highlightBox := na(highlightBox) ? box.new(left=bar_index - barsBackTo2AM, top=highestPrice, right=bar_index, bottom=lowestPrice, bgcolor=inputBgColor, border_color=inputOutlineColor, border_width=inputOutlineWidth) : highlightBox
+            // Update the box to cover the range from 2:00 AM to 5:00 AM
+        box.set_left(highlightBox, bar_index - barsBackTo2AM)
+        box.set_right(highlightBox, bar_index)
+        box.set_top(highlightBox, highestPrice)
+        box.set_bottom(highlightBox, lowestPrice)
+        box.set_bgcolor(highlightBox, inputBgColor)
+        box.set_border_color(highlightBox, inputOutlineColor)
+        box.set_border_width(highlightBox, inputOutlineWidth)
+
+// Call the function to highlight the range from 2:00 AM to 5:00 AM EST
+highlightTimeBox(highlightBoxEnabled1, boxBgColor, boxOutlineColor, boxOutlineWidth, londonStart, londonEnd)
+highlightTimeBox(highlightBoxEnabled2, boxBgColor2, boxOutlineColor2, boxOutlineWidth2, nyStart, nyEnd)
+
+
+// HTF function
+
+// User input for the higher time frame
+showHTF1 = input.bool(true, title="Show HTF Candles", group="HTF candle 1 Settings")
+numCandles1 = input.int(defval = 3, title="Number of Previous HTF Candles", minval=1, maxval=5, group="HTF candle 1 Settings")
+higherTimeFrame1 = input.timeframe("15", title="Select Time Frame", group="HTF candle 1 Settings")
+showHTF2 = input.bool(true, title="Show HTF 2 Candles", group="HTF candle 2 Settings")
+numCandles2 = input.int(defval = 1, title="Number of Previous HTF Candles 2", minval=1, maxval=3, group="HTF candle 2 Settings")
+higherTimeFrame2 = input.timeframe("240", title="Select Time Frame", group="HTF candle 2 Settings")
+showHTF3 = input.bool(true, title="Show HTF 2 Candles", group="HTF candle 3 Settings")
+numCandles3 = input.int(defval = 1, title="Number of Previous HTF Candles 3", minval=1, maxval=2, group="HTF candle 3 Settings")
+higherTimeFrame3 = input.timeframe("D", title="Select Time Frame", group="HTF candle 3 Settings")
+
+
+
+// Function to draw HTF candles
+drawHTFCandle1(htf, indexOffset, indexOffset2) =>
+    var box candleBody = na
+    var line upperWick = na
+    var line lowerWick = na
+
+    wickcolor = #000000
+
+    
+    htfOpen = request.security(syminfo.tickerid, htf, open[indexOffset])
+    htfHigh = request.security(syminfo.tickerid, htf, high[indexOffset])
+    htfLow = request.security(syminfo.tickerid, htf, low[indexOffset])
+    htfClose = request.security(syminfo.tickerid, htf, close[indexOffset])
+
+    candleColor = htfClose >= htfOpen ? #83b885 : #000000
+
+    // Create or update the candle body
+    if na(candleBody)
+        candleBody := box.new(left=bar_index - 2 - indexOffset * 4, right=bar_index + 2 - indexOffset * 5, top=math.max(htfOpen, htfClose), bottom=math.min(htfOpen, htfClose), border_width=1, border_color=candleColor, bgcolor=color.new(candleColor, 0))
+    else
+        box.set_left(candleBody, bar_index + indexOffset2 - 1 - indexOffset * 3)
+        box.set_right(candleBody, bar_index + indexOffset2 + 1 - indexOffset * 3)
+        box.set_top(candleBody, math.max(htfOpen, htfClose))
+        box.set_bottom(candleBody, math.min(htfOpen, htfClose))
+        box.set_border_color(candleBody, wickcolor)
+        box.set_bgcolor(candleBody, color.new(candleColor, 0))
+
+    // Create or update the upper wick
+    if na(upperWick)
+        upperWick := line.new(x1=bar_index - indexOffset * 4, y1=htfHigh, x2=bar_index - indexOffset * 5, y2=math.max(htfOpen, htfClose), width=1, color=wickcolor)
+    else
+        line.set_xy1(upperWick, bar_index + indexOffset2 - indexOffset * 3, htfHigh)
+        line.set_xy2(upperWick, bar_index + indexOffset2 - indexOffset * 3, math.max(htfOpen, htfClose))
+
+    // Create or update the lower wick
+    lowerWick := na(lowerWick) ? line.new(x1=bar_index - indexOffset * 5, y1=htfLow, x2=bar_index - indexOffset * 5, y2=math.min(htfOpen, htfClose), width=1, color=wickcolor) : lowerWick
+    line.set_xy1(lowerWick, bar_index + indexOffset2 - indexOffset * 3, htfLow)
+    line.set_xy2(lowerWick, bar_index + indexOffset2 - indexOffset * 3, math.min(htfOpen, htfClose))
+
+
+if showHTF1
+    x = 40
+
+    if numCandles1 >= 1
+        drawHTFCandle1(higherTimeFrame1, 0, x)
+    if numCandles1 >= 2
+        drawHTFCandle1(higherTimeFrame1, 1, x)
+    if numCandles1 >= 3
+        drawHTFCandle1(higherTimeFrame1, 2, x)
+    if numCandles1 >= 4
+        drawHTFCandle1(higherTimeFrame1, 3, x)
+    if numCandles1 >= 5
+        drawHTFCandle1(higherTimeFrame1, 4, x)
+
+if showHTF2
+    y = 80
+    if numCandles2 >= 1
+        drawHTFCandle1(higherTimeFrame2, 0, y)
+    if numCandles2 >= 2
+        drawHTFCandle1(higherTimeFrame2, 1, y)
+    if numCandles2 >= 3
+        drawHTFCandle1(higherTimeFrame2, 2, y)
+
+
+if showHTF3
+    z = 120
+    if numCandles3 >= 1
+        drawHTFCandle1(higherTimeFrame3, 0, z)
+    if numCandles3 >= 2
+        drawHTFCandle1(higherTimeFrame3, 1, z)
+
